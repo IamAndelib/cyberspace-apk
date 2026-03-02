@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cyberspace</string>
+    <string name="error_offline_title">No Connection</string>
+    <string name="error_offline_message">Check your internet connection and try again.</string>
+    <string name="error_retry">Retry</string>
+    <string name="error_page_title">Something went wrong</string>
+    <string name="error_page_message">The page could not be loaded.</string>
+    <string name="notification_channel_downloads">Downloads</string>
+    <string name="notification_channel_downloads_desc">Download progress notifications</string>
+</resources>

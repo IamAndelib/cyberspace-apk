@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_black">#000000</color>
+    <color name="brand_white">#FFFFFF</color>
+    <color name="spinner_color">#FFFFFF</color>
+    <color name="error_background">#000000</color>
+    <color name="error_text">#FFFFFF</color>
+    <color name="error_button_bg">#333333</color>
+</resources>
