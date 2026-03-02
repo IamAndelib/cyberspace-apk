@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -112,7 +111,6 @@ public class LauncherActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setBuiltInZoomControls(false);
@@ -123,6 +121,8 @@ public class LauncherActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        // Performance: pre-raster tiles just outside viewport to reduce scroll jank
+        settings.setOffscreenPreRaster(true);
 
         webView.setWebViewClient(new CyberspaceWebViewClient());
         webView.setWebChromeClient(new CyberspaceWebChromeClient());
@@ -162,7 +162,6 @@ public class LauncherActivity extends Activity {
             }
             request.setDescription("Downloading file...");
             request.setTitle(pendingDownloadFilename);
-            request.allowScanningByMediaScanner();
             request.setNotificationVisibility(
                     DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setDestinationInExternalPublicDir(
@@ -185,8 +184,16 @@ public class LauncherActivity extends Activity {
         ConnectivityManager cm = (ConnectivityManager)
                 getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm == null) return false;
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.net.Network network = cm.getActiveNetwork();
+            if (network == null) return false;
+            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+            return caps != null && caps.hasCapability(
+                    android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        } else {
+            android.net.NetworkInfo info = cm.getActiveNetworkInfo();
+            return info != null && info.isConnectedOrConnecting();
+        }
     }
 
     private void showOfflinePage() {
@@ -244,14 +251,14 @@ public class LauncherActivity extends Activity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            String url = request.getUrl().toString();
-            if (url.startsWith("https://beta.cyberspace.online")
-                    || url.startsWith("http://beta.cyberspace.online")) {
+            Uri uri = request.getUrl();
+            String host = uri.getHost();
+            if (host != null && host.equals("beta.cyberspace.online")) {
                 return false; // Load inside WebView
             }
             // Open external URLs in the default browser
             try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(intent);
             } catch (Exception e) {
                 // No app can handle this URL; ignore
