@@ -42,6 +42,8 @@ public class LauncherActivity extends Activity {
     private FrameLayout rootLayout;
     private SwipeRefreshLayout swipeRefreshLayout;
 
+    private boolean firstLoad = true;
+
     private ValueCallback<Uri[]> fileChooserCallback;
     private String pendingDownloadUrl;
     private String pendingDownloadMimeType;
@@ -65,6 +67,7 @@ public class LauncherActivity extends Activity {
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.BLACK);
+        webView.setAlpha(0f);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
@@ -93,6 +96,7 @@ public class LauncherActivity extends Activity {
 
         rootLayout.addView(swipeRefreshLayout);
         setContentView(rootLayout);
+        overridePendingTransition(0, 0);
 
         configureWebView();
 
@@ -100,6 +104,7 @@ public class LauncherActivity extends Activity {
             webView.restoreState(savedInstanceState);
         } else {
             if (isNetworkAvailable()) {
+                swipeRefreshLayout.setRefreshing(true);
                 webView.loadUrl(BuildConfig.APP_URL);
             } else {
                 showOfflinePage();
@@ -123,6 +128,8 @@ public class LauncherActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         // Performance: pre-raster tiles just outside viewport to reduce scroll jank
         settings.setOffscreenPreRaster(true);
+
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         webView.setWebViewClient(new CyberspaceWebViewClient());
         webView.setWebChromeClient(new CyberspaceWebChromeClient());
@@ -198,6 +205,7 @@ public class LauncherActivity extends Activity {
 
     private void showOfflinePage() {
         swipeRefreshLayout.setRefreshing(false);
+        webView.setAlpha(1f);
         String html = "<!DOCTYPE html><html><head>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
                 + "<style>"
@@ -219,6 +227,7 @@ public class LauncherActivity extends Activity {
 
     private void showErrorPage(String description) {
         swipeRefreshLayout.setRefreshing(false);
+        webView.setAlpha(1f);
         String html = "<!DOCTYPE html><html><head>"
                 + "<meta name='viewport' content='width=device-width,initial-scale=1'>"
                 + "<style>"
@@ -245,8 +254,17 @@ public class LauncherActivity extends Activity {
     private class CyberspaceWebViewClient extends WebViewClient {
 
         @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            swipeRefreshLayout.setRefreshing(true);
+        }
+
+        @Override
         public void onPageFinished(WebView view, String url) {
             swipeRefreshLayout.setRefreshing(false);
+            if (firstLoad) {
+                firstLoad = false;
+                webView.animate().alpha(1f).setDuration(250).start();
+            }
         }
 
         @Override
